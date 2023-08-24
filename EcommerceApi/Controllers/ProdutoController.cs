@@ -41,4 +41,15 @@ public class ProdutoController : ControllerBase
         return Ok(produtoDto);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetProdutosList()
+    {
+        var constructor = Builders<Produto>.Filter;
+        var condition = constructor.Empty;
+
+        var produtos = await _context.Produtos.Find(condition).ToListAsync();
+        var produtosDto = _mapper.Map<List<ReadProdutoDto>>(produtos);
+
+        return Ok(produtosDto);
+    }
 }
