@@ -44,7 +44,7 @@ public class ProdutoController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetProdutosList([FromQuery] string? nome = null, [FromQuery] float? precoMaiorQue = null, [FromQuery] float? precoMenorQue = null)
+    public async Task<IActionResult> GetProdutosList([FromQuery] string? nome = null, [FromQuery] float? precoMaiorQue = null, [FromQuery] float? precoMenorQue = null, [FromQuery] int pagina = 0)
     {
         var constructor = Builders<Produto>.Filter;
         var condition = constructor.Empty;
@@ -64,8 +64,11 @@ public class ProdutoController : ControllerBase
             condition &= constructor.Lt(c => c.Valor, precoMenorQue.Value);
         }
 
+        int take = 10;
+        var quantPorPag = pagina * take;
+
         var produtos = await _context.Produtos.Find(condition).ToListAsync();
-        var produtosDto = _mapper.Map<List<ReadProdutoDto>>(produtos);
+        var produtosDto = _mapper.Map<List<ReadProdutoDto>>(produtos.Skip(quantPorPag).Take(take));
 
         return Ok(produtosDto);
     }
