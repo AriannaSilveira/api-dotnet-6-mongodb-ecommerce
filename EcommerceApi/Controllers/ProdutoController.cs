@@ -44,7 +44,7 @@ public class ProdutoController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetProdutosList([FromQuery] string? nome = null, [FromQuery] float? precoMaiorQue = null, [FromQuery] float? precoMenorQue = null, [FromQuery] int pagina = 0)
+    public async Task<IActionResult> GetProdutosList([FromQuery] string? nome = null, [FromQuery] float? precoMaiorQue = null, [FromQuery] float? precoMenorQue = null, [FromQuery] int pagina = 0, [FromQuery] string? ordem = null)
     {
         var constructor = Builders<Produto>.Filter;
         var condition = constructor.Empty;
@@ -67,8 +67,26 @@ public class ProdutoController : ControllerBase
         int take = 10;
         var quantPorPag = pagina * take;
 
-        var produtos = await _context.Produtos.Find(condition).ToListAsync();
-        var produtosDto = _mapper.Map<List<ReadProdutoDto>>(produtos.Skip(quantPorPag).Take(take));
+        var query = _context.Produtos.Find(condition);
+
+        if (!string.IsNullOrEmpty(ordem))
+        {
+            if (ordem == "asc")
+            {
+                query = query.SortBy(p => p.Valor);
+            }
+            else if (ordem == "desc")
+            {
+                query = query.SortByDescending(p => p.Valor);
+            }
+            else
+            {
+                return BadRequest(new { mensagem = "Forneça um valor de ordem correto: 'asc' ou 'desc'." });
+            }
+        }
+
+        var produtos = await query.Skip(quantPorPag).Limit(take).ToListAsync();
+        var produtosDto = _mapper.Map<List<ReadProdutoDto>>(produtos);
 
         return Ok(produtosDto);
     }
