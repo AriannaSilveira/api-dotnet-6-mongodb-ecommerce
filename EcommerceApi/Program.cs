@@ -1,4 +1,5 @@
 using EcommerceApi.Data;
+using EcommerceApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -9,6 +10,11 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<ProdutoContext>();
+builder.Services.AddSingleton<CarrinhoContext>();
+builder.Services.AddSingleton<ProdutoVendidoContext>();
+builder.Services.AddSingleton<CarrinhoService>();
+builder.Services.AddSingleton<ProdutoService>();
+builder.Services.AddSingleton<ProdutoVendidoService>();
 builder.Services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
 
 var app = builder.Build();

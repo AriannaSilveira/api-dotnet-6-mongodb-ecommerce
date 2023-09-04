@@ -1,11 +1,6 @@
-﻿using Amazon.Auth.AccessControlPolicy;
-using AutoMapper;
-using EcommerceApi.Data;
-using EcommerceApi.Data.Dtos;
-using EcommerceApi.Models;
+﻿using EcommerceApi.Data.Dtos;
+using EcommerceApi.Services;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
-using MongoDB.Driver;
 
 namespace EcommerceApi.Controllers;
 
@@ -13,81 +8,53 @@ namespace EcommerceApi.Controllers;
 [Route("[controller]")]
 public class ProdutoController : ControllerBase
 {
-    private ProdutoContext _context;
-    private IMapper _mapper;
-    public ProdutoController(ProdutoContext context, IMapper mapper)
+    private readonly ProdutoService _produtoService;
+
+    public ProdutoController(ProdutoService produtoService)
     {
-        _context = context;
-        _mapper = mapper;
+        _produtoService = produtoService;
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateProduto([FromBody] CreateProdutoDto produtooDto)
+    public async Task<IActionResult> CreateProduto([FromBody] CreateProdutoDto produtoDto)
     {
-        Produto produto = _mapper.Map<Produto>(produtooDto);
-
-        await _context.Produtos.InsertOneAsync(produto);
+        var produto = await _produtoService.CreateProduto(produtoDto);
         return CreatedAtAction(nameof(GetProdutoById), new { id = produto.Id }, produto);
     }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetProdutoById(string id)
     {
-        var constructor = Builders<Produto>.Filter;
-        var condition = constructor.Eq(x => x.Id, id);
+        var produtoDto = await _produtoService.GetProdutoById(id);
 
-        var produto = await _context.Produtos.Find(condition).FirstOrDefaultAsync();
+        if (produtoDto == null)
+            return NotFound();
 
-        if (produto == null) return NotFound();
-        var produtoDto = _mapper.Map<ReadProdutoDto>(produto);
         return Ok(produtoDto);
     }
 
     [HttpGet]
     public async Task<IActionResult> GetProdutosList([FromQuery] string? nome = null, [FromQuery] float? precoMaiorQue = null, [FromQuery] float? precoMenorQue = null, [FromQuery] int pagina = 0, [FromQuery] string? ordem = null)
     {
-        var constructor = Builders<Produto>.Filter;
-        var condition = constructor.Empty;
-
-        if (!string.IsNullOrEmpty(nome))
-        {
-            condition &= constructor.Regex(c => c.Nome, new BsonRegularExpression(nome, "i"));
-        }
-
-        if (precoMaiorQue.HasValue)
-        {
-            condition &= constructor.Gt(c => c.Valor, precoMaiorQue.Value);
-        }
-
-        if (precoMenorQue.HasValue)
-        {
-            condition &= constructor.Lt(c => c.Valor, precoMenorQue.Value);
-        }
-
-        int take = 10;
-        var quantPorPag = pagina * take;
-
-        var query = _context.Produtos.Find(condition);
-
-        if (!string.IsNullOrEmpty(ordem))
-        {
-            if (ordem == "asc")
-            {
-                query = query.SortBy(p => p.Valor);
-            }
-            else if (ordem == "desc")
-            {
-                query = query.SortByDescending(p => p.Valor);
-            }
-            else
-            {
-                return BadRequest(new { mensagem = "Forneça um valor de ordem correto: 'asc' ou 'desc'." });
-            }
-        }
-
-        var produtos = await query.Skip(quantPorPag).Limit(take).ToListAsync();
-        var produtosDto = _mapper.Map<List<ReadProdutoDto>>(produtos);
+        var produtosDto = await _produtoService.GetProdutosList(nome, precoMaiorQue, precoMenorQue, pagina, ordem);
 
         return Ok(produtosDto);
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteProduto(string id)
+    {
+        var produto = await _produtoService.GetProdutoById(id);
+
+        if (produto == null)
+            return NotFound();
+        
+
+        var deleted = await _produtoService.DeleteProduto(id);
+
+        if (deleted)
+            return NoContent();
+        
+        return BadRequest("Erro ao excluir o produto.");
     }
 }
